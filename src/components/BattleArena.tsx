@@ -70,6 +70,27 @@ const BattleArena = () => {
   
   // Set up real-time synchronization listener for game state
   useEffect(() => {
+    // Function to check for game state updates
+    const checkGameState = () => {
+      const storedState = localStorage.getItem(`codingBattle_${roomId}_gameState`);
+      if (storedState && storedState !== gameState) {
+        setGameState(storedState as 'waiting' | 'countdown' | 'player1' | 'player2' | 'results');
+        
+        if (storedState === 'countdown') {
+          toast({
+            title: "Game Starting",
+            description: "Get ready! The battle is about to begin.",
+          });
+        }
+      }
+    };
+    
+    // Check immediately when component mounts
+    if (roomId) {
+      checkGameState();
+    }
+    
+    // Set up storage event listener for real-time updates
     const handleStorageEvent = (event: StorageEvent) => {
       if (event.key === `codingBattle_${roomId}_gameState`) {
         const newState = event.newValue as 'waiting' | 'countdown' | 'player1' | 'player2' | 'results';
@@ -85,8 +106,15 @@ const BattleArena = () => {
       }
     };
     
+    // Set up polling for game state updates (for cross-window communication)
+    const intervalId = setInterval(checkGameState, 1000);
+    
     window.addEventListener('storage', handleStorageEvent);
-    return () => window.removeEventListener('storage', handleStorageEvent);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageEvent);
+      clearInterval(intervalId);
+    };
   }, [roomId, gameState, toast]);
   
   // Update game state in localStorage for real-time sync
@@ -389,11 +417,19 @@ const BattleArena = () => {
         </div>
       </div>
       
-      {gameState === 'waiting' && (
+      {gameState === 'waiting' && playerRole === 1 && (
         <div className="flex items-center justify-center mt-8">
           <Button onClick={startGame} className="game-button">
             <Play className="mr-2 h-4 w-4" /> Start Battle
           </Button>
+        </div>
+      )}
+      
+      {gameState === 'waiting' && playerRole === 2 && (
+        <div className="flex items-center justify-center mt-8">
+          <div className="p-4 rounded-md bg-secondary/50 text-center">
+            Waiting for Player 1 to start the battle...
+          </div>
         </div>
       )}
       
