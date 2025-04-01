@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -12,12 +12,19 @@ interface CodeEditorProps {
 
 const CodeEditor = ({
   playerNumber,
-  initialCode = "// Start coding here...\n\nfunction solution() {\n  // Your code here\n  \n}\n",
+  initialCode = "// Start coding here...\n\nfunction solution(n) {\n  // Your code here\n  \n}\n",
   readOnly = false,
   onCodeChange
 }: CodeEditorProps) => {
   const [code, setCode] = useState(initialCode);
   const playerColor = playerNumber === 1 ? 'player1' : 'player2';
+  
+  // Update code when initialCode prop changes
+  useEffect(() => {
+    if (initialCode !== code) {
+      setCode(initialCode);
+    }
+  }, [initialCode]);
   
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newCode = e.target.value;

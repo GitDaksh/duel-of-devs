@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import PlayerCard from './PlayerCard';
 import CodingChallenge from './CodingChallenge';
@@ -22,13 +23,13 @@ const BattleArena = () => {
     name: "Player 1",
     score: 0,
     timeRemaining: 60,
-    code: "// Start coding here...\n\nfunction solution() {\n  // Your code here\n  \n}\n",
+    code: "// Start coding here...\n\nfunction solution(n) {\n  // Your code here\n  \n}\n",
   });
   const [player2, setPlayer2] = useState<PlayerState>({
     name: "Player 2",
     score: 0,
     timeRemaining: 60,
-    code: "// Start coding here...\n\nfunction solution() {\n  // Your code here\n  \n}\n",
+    code: "// Start coding here...\n\nfunction solution(n) {\n  // Your code here\n  \n}\n",
   });
   const [showResults, setShowResults] = useState(false);
   const [winner, setWinner] = useState<string>("");
@@ -43,6 +44,7 @@ const BattleArena = () => {
     category: "Algorithms",
   };
   
+  // Handle room initialization and player role assignment
   useEffect(() => {
     if (!roomId) {
       const generatedId = Math.random().toString(36).substring(2, 10);
@@ -66,6 +68,35 @@ const BattleArena = () => {
     }
   }, []);
   
+  // Set up real-time synchronization listener for game state
+  useEffect(() => {
+    const handleStorageEvent = (event: StorageEvent) => {
+      if (event.key === `codingBattle_${roomId}_gameState`) {
+        const newState = event.newValue as 'waiting' | 'countdown' | 'player1' | 'player2' | 'results';
+        if (newState && newState !== gameState) {
+          setGameState(newState);
+          if (newState === 'countdown') {
+            toast({
+              title: "Game Starting",
+              description: "Get ready! The battle is about to begin.",
+            });
+          }
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageEvent);
+    return () => window.removeEventListener('storage', handleStorageEvent);
+  }, [roomId, gameState, toast]);
+  
+  // Update game state in localStorage for real-time sync
+  useEffect(() => {
+    if (roomId) {
+      localStorage.setItem(`codingBattle_${roomId}_gameState`, gameState);
+    }
+  }, [gameState, roomId]);
+  
+  // Handle game timer countdown
   useEffect(() => {
     let timer: NodeJS.Timeout;
     
@@ -106,9 +137,12 @@ const BattleArena = () => {
   
   const evaluateFibonacciSolution = (code: string): boolean => {
     try {
+      // Create a safer evaluation environment
       const sandboxFunction = new Function(`
+        "use strict";
         ${code}
         
+        // Test cases for Fibonacci
         const testCases = [
           { input: 0, expected: 0 },
           { input: 1, expected: 1 },
@@ -117,12 +151,16 @@ const BattleArena = () => {
           { input: 10, expected: 55 }
         ];
         
+        // Verify solution function exists
         if (typeof solution !== 'function') {
           return false;
         }
         
+        // Test each case
         for (const test of testCases) {
-          if (solution(test.input) !== test.expected) {
+          const result = solution(test.input);
+          if (result !== test.expected) {
+            console.log('Failed test case:', test.input, 'Expected:', test.expected, 'Got:', result);
             return false;
           }
         }
@@ -130,7 +168,9 @@ const BattleArena = () => {
         return true;
       `);
       
-      return sandboxFunction();
+      const result = sandboxFunction();
+      console.log("Solution evaluation result:", result);
+      return result;
     } catch (error) {
       console.error('Error evaluating solution:', error);
       return false;
@@ -160,6 +200,7 @@ const BattleArena = () => {
             title: "Correct solution!",
             description: "Your solution passed all test cases. Player 2's turn now.",
           });
+          setGameState('player2');
         } else {
           toast({
             title: "Incorrect solution",
@@ -168,8 +209,6 @@ const BattleArena = () => {
           });
           return;
         }
-        
-        setGameState('player2');
       } else if (gameState === 'player2') {
         if (!player2.code.includes("function solution")) {
           toast({
@@ -191,6 +230,7 @@ const BattleArena = () => {
             title: "Correct solution!",
             description: "Your solution passed all test cases. Calculating results...",
           });
+          endGame();
         } else {
           toast({
             title: "Incorrect solution",
@@ -199,10 +239,9 @@ const BattleArena = () => {
           });
           return;
         }
-        
-        endGame();
       }
     } catch (error) {
+      console.error("Error in submission:", error);
       toast({
         title: "Error evaluating code",
         description: "There was a problem with your solution.",
@@ -246,13 +285,13 @@ const BattleArena = () => {
       name: "Player 1",
       score: 0,
       timeRemaining: 60,
-      code: "// Start coding here...\n\nfunction solution() {\n  // Your code here\n  \n}\n",
+      code: "// Start coding here...\n\nfunction solution(n) {\n  // Your code here\n  \n}\n",
     });
     setPlayer2({
       name: "Player 2",
       score: 0,
       timeRemaining: 60,
-      code: "// Start coding here...\n\nfunction solution() {\n  // Your code here\n  \n}\n",
+      code: "// Start coding here...\n\nfunction solution(n) {\n  // Your code here\n  \n}\n",
     });
     setGameState('waiting');
     setShowResults(false);
