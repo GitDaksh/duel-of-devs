@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface CountdownTimerProps {
   startFrom: number;
@@ -8,49 +8,33 @@ interface CountdownTimerProps {
 
 const CountdownTimer = ({ startFrom, onComplete }: CountdownTimerProps) => {
   const [count, setCount] = useState(startFrom);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const hasCompletedRef = useRef(false);
   
-  // Reset the timer when it's mounted
   useEffect(() => {
-    setCount(startFrom);
-    hasCompletedRef.current = false;
+    // Set up the interval that runs every second
+    const intervalId = setInterval(() => {
+      setCount(prevCount => {
+        // If we've reached 0, clear the interval and call onComplete
+        if (prevCount <= 1) {
+          clearInterval(intervalId);
+          // Use setTimeout to ensure state updates before calling onComplete
+          setTimeout(() => {
+            onComplete();
+          }, 0);
+          return 0;
+        }
+        return prevCount - 1;
+      });
+    }, 1000);
     
-    // Clear any existing timers when the component unmounts
+    // Clean up interval on unmount
     return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
+      clearInterval(intervalId);
     };
-  }, [startFrom]);
-  
-  // Handle the countdown logic
-  useEffect(() => {
-    // Prevent multiple completion calls
-    if (count <= 0 && !hasCompletedRef.current) {
-      hasCompletedRef.current = true;
-      onComplete();
-      return;
-    }
-    
-    // Only set up timer if count is above 0
-    if (count > 0) {
-      timerRef.current = setTimeout(() => {
-        setCount((prevCount) => prevCount - 1);
-      }, 1000);
-    }
-    
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    };
-  }, [count, onComplete]);
+  }, [onComplete]); // Only re-run if onComplete changes
   
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50">
-      <div className="countdown-number text-white text-8xl font-bold animate-pulse">
+      <div className="text-white text-8xl font-bold">
         {count}
       </div>
     </div>
