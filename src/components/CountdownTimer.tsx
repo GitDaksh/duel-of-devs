@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 interface CountdownTimerProps {
   startFrom: number;
@@ -8,29 +8,44 @@ interface CountdownTimerProps {
 
 const CountdownTimer = ({ startFrom, onComplete }: CountdownTimerProps) => {
   const [count, setCount] = useState(startFrom);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const hasCompletedRef = useRef(false);
   
+  // Reset the timer when it's mounted
   useEffect(() => {
-    // Initialize count to startFrom only on first render
     setCount(startFrom);
+    hasCompletedRef.current = false;
+    
+    // Clear any existing timers when the component unmounts
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
   }, [startFrom]);
   
+  // Handle the countdown logic
   useEffect(() => {
-    // Only proceed if count is valid
-    if (count === undefined || count === null) return;
-    
-    // If countdown reaches zero, call onComplete and exit
-    if (count <= 0) {
+    // Prevent multiple completion calls
+    if (count <= 0 && !hasCompletedRef.current) {
+      hasCompletedRef.current = true;
       onComplete();
       return;
     }
     
-    // Set up the countdown timer
-    const timer = setTimeout(() => {
-      setCount((prevCount) => prevCount - 1);
-    }, 1000);
+    // Only set up timer if count is above 0
+    if (count > 0) {
+      timerRef.current = setTimeout(() => {
+        setCount((prevCount) => prevCount - 1);
+      }, 1000);
+    }
     
-    // Cleanup function to clear timer
-    return () => clearTimeout(timer);
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
   }, [count, onComplete]);
   
   return (
